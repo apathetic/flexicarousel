@@ -92,6 +92,16 @@ A server will spin up at ```http://localhost:8080```, where you may play with th
 
 ## Release History
 
+### 0.7
+* dropping support for IE8
+  - need classList
+  - need transform (dropping vendor prefix support)
+  - object.assign...?
+* replacing CSS tranistions w/ requestAnimationFrame
+* kinetic scrolling
+* friction
+* updating demo styles to BEM
+
 ### 0.6
 * updated some css
 

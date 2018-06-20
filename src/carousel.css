@@ -18,7 +18,7 @@
 	transition: all 0.4s ease !important;
 }
 
-.carousel .wrap {
+.carousel__wrap {
 	white-space: nowrap;	/* fallback */
 	width: 100%;
 	display: -webkit-box;
@@ -37,7 +37,7 @@
 	padding: 0;
 }
 
-.carousel .wrap > li {
+.carousel__slide {
 	display: inline-block;	/* fallback */
 	vertical-align: top;	/* fallback */
 	position: relative;	/* fallback */
