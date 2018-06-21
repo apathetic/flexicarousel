@@ -23,46 +23,30 @@ SOFTWARE.
 */
 'use strict';
 
-var Carousel = function Carousel(container, options) {
-  var this$1 = this;
+function easeInCubic(t, b, c, d) {
+  return c * (t /= d) * t * t + b;
+}
+
+// import { isTouch, transform } from './features';
+var Carousel = function Carousel(handle, options) {
   if ( options === void 0 ) options={};
 
 
-  this.handle = container;
-
-  // default options
-  this.options = {
-    animateClass: 'animate',
-    activeClass: 'active',
-    slideWrap: 'ul',
-    slides: 'li',         // the slides
-    infinite: true,       // set to true to be able to navigate from last to first slide, and vice versa
-    display: 1,           // the minimum # of slides to display at a time. If you want to have slides
-                            // "hanging" off outside the currently viewable ones, they'd be included here.
-    disableDragging: false, // set to true if you'd like to only use the API to navigate
-    initialIndex: 0       // slide index where the carousel should start
-  };
+  this.handle = handle;
 
   // state vars
   this.current = 0;
   this.slides = [];
-  this.sliding = false;
-  this.cloned = 0;
-  this.active = true;
+  this.isSliding = false;
+  this.isActive = true;
 
   // touch vars
-  this.dragging = false;
+  this.isDragging = false;
   this.dragThreshold = 50;
   this.deltaX = 0;
 
-  // feature detection
-  this.isTouch = 'ontouchend' in document;
-  ['transform', 'webkitTransform', 'MozTransform', 'OTransform', 'msTransform'].forEach(function (t) {
-    if (document.body.style[t] !== undefined) { this$1.transform = t; }
-  });
-
   // set up options
-  this.options = this._assign(this.options, options);
+  this.options = this._assign(Carousel.defaults, options);
 
   // engage engines
   this.init();
@@ -82,117 +66,11 @@ Carousel.prototype.init = function init () {
   this.current = this.options.initialIndex;
 
   if (!this.slideWrap || !this.slides || this.numSlides < this.options.display) { 
-    console.log('Carousel: insufficient # slides');
-    return this.active = false;
+    console.warn('Carousel: insufficient # slides');
+    return this.isActive = false;
   }
-  if (this.options.infinite) { this._cloneSlides(); }
-
-  this._createBindings();
-  this._getDimensions();
-  this.go(this.current, false);
-
-  if (!this.options.disableDragging) {
-    if (this.isTouch) {
-      ['touchstart', 'touchmove', 'touchend', 'touchcancel'].map(function (event) {
-        this$1.handle.addEventListener(event, this$1._bindings[event]);
-      });
-    } else {
-      ['mousedown', 'mousemove', 'mouseup', 'mouseleave', 'click'].map(function (event) {
-        this$1.handle.addEventListener(event, this$1._bindings[event]);
-      });
-    }
-  }
-
-  window.addEventListener('resize', this._bindings['resize']);
-  window.addEventListener('orientationchange', this._bindings['orientationchange']);
-
-  return this;
-};
-
-/**
- * Removes all event bindings.
- * @returns {Carousel}
- */
-Carousel.prototype.destroy = function destroy () {
-    var this$1 = this;
-
-  if (!this.active) { return; }
-
-  for (var event in this$1._bindings) {
-    this$1.handle.removeEventListener(event, this$1._bindings[event]);
-  }
-
-  window.removeEventListener('resize', this._bindings['resize']);
-  window.removeEventListener('orientationchange', this._bindings['orientationchange']);
-
-  this._bindings = null;
-  this.options = this.slides = this.slideWrap = this.handle = null;
-  this.active = false;
-
-  // remove classes ...
-  // remove clones ...
-};
-
-/**
- * Go to the next slide
- * @return {void}
- */
-Carousel.prototype.next = function next () {
-  if (this.options.infinite || this.current !== this.numSlides-1) {
-    this.go(this.current + 1);
-  } else {
-    this.go(this.numSlides-1);
-  }
-};
-
-/**
- * Go to the previous slide
- * @return {void}
- */
-Carousel.prototype.prev = function prev () {
-  if (this.options.infinite || this.current !== 0) {
-    this.go(this.current - 1);
-  } else {
-    this.go(0);  // allow the slide to "snap" back if dragging and not infinite
-  }
-};
-
-/**
- * Go to a particular slide. Prime the "to" slide by positioning it, and then calling _slide() if needed
- * @param{int} to  the slide to go to
- * @return {void}
- */
-Carousel.prototype.go = function go (to, animate) {
-    if ( animate === void 0 ) animate = true;
-
-  var opts = this.options;
-
-  if (this.sliding || !this.active) { return; }
-
-  if (to < 0 || to >= this.numSlides) {                           // position the carousel if infinite and at end of bounds
-    var temp = (to < 0) ? this.current + this.numSlides : this.current - this.numSlides;
-    this._slide( -(temp * this.width - this.deltaX) );
-    this.slideWrap.offsetHeight;                                  // force a repaint to actually position "to" slide. *Important*
-  }
-
-  to = this._loop(to);
-  this._slide( -(to * this.width), animate );
-
-  if (opts.onSlide && to !== this.current) { opts.onSlide.call(this, to, this.current); }// note: doesn't check if it's a function
-
-  this._removeClass(this.slides[this.current], opts.activeClass);
-  this._addClass(this.slides[to], opts.activeClass);
-  this.current = to;
-};
-
-// ----------------------------------- Event Listeners ----------------------------------- //
-
-/**
- * Create references to all bound Events so that they may be removed upon destroy()
- * @return {void}
- */
-Carousel.prototype._createBindings = function _createBindings () {
-    var this$1 = this;
+  // if (this.options.infinite) { this._cloneSlides(); }
+    // if (!this.options.disableDragging) {
 
   this._bindings = {
     // handle
@@ -205,15 +83,114 @@ Carousel.prototype._createBindings = function _createBindings () {
     'mouseup': function (e) { this$1._dragEnd(e); },
     'mouseleave': function (e) { this$1._dragEnd(e); },
     'click': function (e) { this$1._checkDragThreshold(e); },
-
+ 
     // window
     'resize': function (e) { this$1._updateView(e); },
     'orientationchange': function (e) { this$1._updateView(e); }
   };
+ 
+  if ('ontouchend' in document) {
+    ['touchstart', 'touchmove', 'touchend', 'touchcancel'].map(function (event) {
+      this$1.handle.addEventListener(event, this$1._bindings[event]);
+    });
+  } else {
+    ['mousedown', 'mousemove', 'mouseup', 'mouseleave', 'click'].map(function (event) {
+      this$1.handle.addEventListener(event, this$1._bindings[event]);
+    });
+  }
+    
+  window.addEventListener('resize', this._bindings['resize']);
+  window.addEventListener('orientationchange', this._bindings['orientationchange']);
+    
+  this._getDimensions();
+  this.go(this.current, false);
+  return this;
 };
 
+/**
+ * Removes all event bindings.
+ * @returns {Carousel}
+ */
+Carousel.prototype.destroy = function destroy () {
+    var this$1 = this;
+
+  // if (!this.isActive) { return; }
+
+  for (var event in this$1._bindings) {
+    this$1.handle.removeEventListener(event, this$1._bindings[event]);
+  }
+
+  window.removeEventListener('resize', this._bindings['resize']);
+  window.removeEventListener('orientationchange', this._bindings['orientationchange']);
+
+  this.options = this.slides = this.slideWrap = this.handle = null;
+  this.isActive = false;
+
+  // remove classes ...
+  // remove clones ...
+};
+
+/**
+ * Go to the next slide.
+ * @return {void}
+ */
+Carousel.prototype.next = function next () {
+  if (this.options.infinite || this.current !== this.numSlides-1) {
+    this.go(this.current + 1);
+  } else {
+    this.go(this.numSlides - 1);
+  }
+};
+
+/**
+ * Go to the previous slide
+ * @return {void}
+ */
+Carousel.prototype.prev = function prev () {
+  if (this.options.infinite || this.current !== 0) {
+    this.go(this.current - 1);
+  } else {
+    this.go(0);
+  }
+};
+
+/**
+ * Go to a particular slide.
+ * @param {int} to The slide to go to
+ */
+Carousel.prototype.go = function go (to) {
+  var opts = this.options;
+
+  if (this.isSliding || !this.isActive) { return; }
+
+  // if (to < 0 || to >= this.numSlides) {                           // position the carousel if infinite and at end of bounds
+  // let temp = (to < 0) ? this.current + this.numSlides : this.current - this.numSlides;
+  // let offset = -(temp * this.width - this.deltaX);
+  // this.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)'; // translateX for better text rendering...?
+  // this.slideWrap.offsetHeight;                                  // force a repaint to actually position "to" slide. *Important*
+  // }
+
+  to = this._loop(to);
+  this._slide(-(to * this.width));
+    
+  if (to !== this.current) { 
+    opts.onSlide && opts.onSlide.call(this, to, this.current);
+  }
+
+  this.slides[this.current].classList.remove(opts.activeClass);
+  this.slides[to].classList.add(opts.activeClass);
+  this.current = to;
+};
+
+
 // ------------------------------------- Drag Events ------------------------------------- //
-  
+
+
+/**
+ * Check if user has sufficiently dragged to advance to a new slide.
+ * @param {Event} e The touch event.
+ * @private
+ */
 Carousel.prototype._checkDragThreshold = function _checkDragThreshold (e) {
   if (this.dragThresholdMet) {
     e.preventDefault();
@@ -221,61 +198,73 @@ Carousel.prototype._checkDragThreshold = function _checkDragThreshold (e) {
 };
 
 /**
+ * Normalizes a touch or drag event into X, Y coordinate values.
+ * @param {Event} e The touch or drag event
+ * @return {Object} An object with X, Y coordinates
+ */
+Carousel.prototype._normalizeEvent = function _normalizeEvent (e) {
+  e = e.originalEvent || e;
+  var touches = e.touches !== undefined ? e.touches : false;
+
+  return {
+    X: touches ? touches[0].pageX : e.clientX,
+    Y: touches ? touches[0].pageY : e.clientY
+  };
+};
+
+/**
  * Start dragging (via touch)
- * @param{event} e Touch event
- * @return {void}
+ * @param {Event} e The touch event.
+ * @private
  */
 Carousel.prototype._dragStart = function _dragStart (e) {
-  var touches;
-
-  if (this.sliding) {
-    return false;
+  if (this.isSliding) {
+    // return false;
+    clearTimeout(this.timer);
+    this.isSliding = false;
   }
 
-  e = e.originalEvent || e;
-  touches = e.touches !== undefined ? e.touches : false;
+  var drag = this._normalizeEvent(e);
 
+  this.startClientX = drag.X;
+  this.startClientY = drag.Y;
   this.dragThresholdMet = false;
-  this.dragging = true;
-  this.startClientX = touches ? touches[0].pageX : e.clientX;
-  this.startClientY = touches ? touches[0].pageY : e.clientY;
-  this.deltaX = 0;// reset for the case when user does 0,0 touch
-  this.deltaY = 0;// reset for the case when user does 0,0 touch
+  this.isDragging = true;
+  this.deltaX = 0;
+  this.deltaY = 0;
 
   if (e.target.tagName === 'IMG' || e.target.tagName === 'A') { e.target.draggable = false; }
 };
 
 /**
  * Update slides positions according to user's touch
- * @param{event} e Touch event
- * @return {void}
+ * @param {Event} e The touch event.
+ * @private
  */
 Carousel.prototype._drag = function _drag (e) {
-  var touches;
-
-  if (!this.dragging) {
+  if (!this.isDragging) {
+    console.warn('why would you get here?');
     return;
   }
 
-  e = e.originalEvent || e;
-  touches = e.touches !== undefined ? e.touches : false;
-  this.deltaX = (touches ? touches[0].pageX : e.clientX) - this.startClientX;
-  this.deltaY = (touches ? touches[0].pageY : e.clientY) - this.startClientY;
+  var drag = this._normalizeEvent(e);
 
-  // drag slide along with cursor
-  this._slide( -(this.current * this.width - this.deltaX ) );
+  this.deltaX = drag.X - this.startClientX;
+  this.deltaY = drag.Y - this.startClientY;
+  this.offset = -(this.current * this.width - this.deltaX);                  // drag slide along with cursor
+  this.slideWrap.style.transform = 'translate3d(' + this.offset + 'px, 0, 0)'; // translateX for better text rendering...?
+  this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;        // determines if we should do slide, or cancel
 
-  // determine if we should do slide, or cancel and let the event pass through to the page
-  this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;
+  // this.drags.push(this.deltaX).shift(); // keep track of X last drag position, so that we may determine velocity. this.drags is an array of 4(?) items...?
 };
 
 /**
  * Drag end, calculate slides' new positions
- * @param{event} e Touch event
- * @return {void}
+ * @param {Event} e The touch event.
+ * @private
  */
 Carousel.prototype._dragEnd = function _dragEnd (e) {
-  if (!this.dragging) {
+  if (!this.isDragging) {
     return;
   }
 
@@ -285,17 +274,17 @@ Carousel.prototype._dragEnd = function _dragEnd (e) {
     e.stopImmediatePropagation();
   }
 
-  this.dragging = false;
+  this.isDragging = false;
 
-  if ( this.deltaX !== 0 && Math.abs(this.deltaX) < this.dragThreshold ) {
+  if (this.deltaX !== 0 && Math.abs(this.deltaX) < this.dragThreshold) {
     this.go(this.current);
   }
-  else if ( this.deltaX > 0 ) {
+  else if (this.deltaX > 0) {
     // var jump = Math.round(this.deltaX / this.width);// distance-based check to swipe multiple slides
     // this.go(this.current - jump);
     this.prev();
   }
-  else if ( this.deltaX < 0 ) {
+  else if (this.deltaX < 0) {
     this.next();
   }
 
@@ -307,34 +296,66 @@ Carousel.prototype._dragEnd = function _dragEnd (e) {
 
 
 /**
+ * Animates the translation of the slide wrapper.
+ * @param{number} end Where to translate the slide to. 
+ * @private
+ */
+Carousel.prototype.___slide = function ___slide (end) {
+    var this$1 = this;
+
+  var duration = 400;
+  var start = this.offset;
+  var startTime;
+
+  this.slideWrap.classList.add(this.options.animateClass);
+
+  // if (this.isSliding) {
+
+    var scroll = function (timestamp) {
+      startTime = startTime || timestamp;
+      var elapsed = timestamp - startTime;
+      var offset = easeInCubic(elapsed, start, end, duration);
+
+      console.log(offset);
+      this$1.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)';
+      // // use 3D tranforms for hardware acceleration on iOS
+      // // but use 2D when settled, for better font-rendering
+      // this.slider.style.transform = this.isAnimating ?
+      // 'translate3d(' + offset + ',0,0)' : 'translateX(' + offset + ')';
+
+      if (elapsed < duration) {
+        window.requestAnimationFrame(scroll);
+      } else {
+        this$1.slideWrap.classList.remove(this$1.options.animateClass);
+        this$1.isSliding = false;
+      }
+    };
+  
+    window.requestAnimationFrame(scroll);
+  // }
+};
+
+/**
  * Applies the slide translation in browser
  * @param{number} offset Where to translate the slide to. 
- * @param{boolean} animate Whether to animation the transition or not.
- * @return {void}
+ * @private
  */
-Carousel.prototype._slide = function _slide (offset, animate) {
+Carousel.prototype._slide = function _slide (offset) {
     var this$1 = this;
 
   var delay = 400;
 
   offset -= this.offset;
 
-  if (animate) {
-    this.sliding = true;
-    this._addClass(this.slideWrap, this.options.animateClass);
+  this.isSliding = true;
+  this.slideWrap.classList.add(this.options.animateClass);
 
-    setTimeout(function () {
-      this$1.sliding = false;
-      this$1.active && this$1._removeClass(this$1.slideWrap, this$1.options.animateClass);
-    }, delay);
-  }
+  this.timer = setTimeout(function () {
+    this$1.isSliding = false;
+    /* this.isActive && */ this$1.slideWrap.classList.remove(this$1.options.animateClass);
+  }, delay);
 
-  if (this.transform) {
-    this.slideWrap.style[this.transform] = 'translate3d(' + offset + 'px, 0, 0)';
-  }
-  else {
-    this.slideWrap.style.left = offset+'px';
-  }
+  this.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)';
 };
 
 
@@ -345,6 +366,7 @@ Carousel.prototype._slide = function _slide (offset, animate) {
  * Helper function. Calculate modulo of a slides position
  * @param{int} val Slide's position
  * @return {int} the index modulo the # of slides
+ * @private
  */
 Carousel.prototype._loop = function _loop (val) {
   return (this.numSlides + (val % this.numSlides)) % this.numSlides;
@@ -352,7 +374,7 @@ Carousel.prototype._loop = function _loop (val) {
 
 /**
  * Set the Carousel's width and determine the slide offset.
- * @return {void}
+ * @private
  */
 Carousel.prototype._getDimensions = function _getDimensions () {
   this.width = this.slides[0].getBoundingClientRect().width;
@@ -360,8 +382,8 @@ Carousel.prototype._getDimensions = function _getDimensions () {
 };
 
 /**
- * Update the slides' position on a resize. This is throttled at 300ms
- * @return {void}
+ * Update the slides' position on a resize. This is throttled at 150ms
+ * @private
  */
 Carousel.prototype._updateView = function _updateView () {
     var this$1 = this;
@@ -374,9 +396,10 @@ Carousel.prototype._updateView = function _updateView () {
     this.timer = setTimeout(function () {
       this$1._getDimensions();
       this$1.go(this$1.current);
-    }, 300);
+    }, 150);
   }
 };
+
 
 /**
  * Duplicate the first and last N slides so that infinite scrolling can work.
@@ -411,32 +434,13 @@ Carousel.prototype._cloneSlides = function _cloneSlides () {
   }
 };
 
-/**
- * Helper function to add a class to an element
- * @param{int} i     Index of the slide to add a class to
- * @param{string} name Class name
- * @return {void}
- */
-Carousel.prototype._addClass = function _addClass (el, name) {
-  if (el.classList) { el.classList.add(name); }
-  else {el.className += ' ' + name; }
-};
 
-/**
- * Helper function to remove a class from an element
- * @param{int} i     Index of the slide to remove class from
- * @param{string} name Class name
- * @return {void}
- */
-Carousel.prototype._removeClass = function _removeClass (el, name) {
-  if (el.classList) { el.classList.remove(name); }
-  else { el.className = el.className.replace(new RegExp('(^|\\b)' + name.split(' ').join('|') + '(\\b|$)', 'gi'), ' '); }
-};
 
 /**
  * Shallow Object.assign polyfill
- * @param {object} dest The object to copy into
- * @param {object} srcThe object to copy from
+ * @param {Object} dest The object to copy into
+ * @param {Object} srcThe object to copy from
+ * @return {Object} The Object with merged properties
  */
 Carousel.prototype._assign = function _assign (dest, src) {
   Object.keys(src).forEach(function (key) {
@@ -444,6 +448,22 @@ Carousel.prototype._assign = function _assign (dest, src) {
   });
 
   return dest;
+};
+
+
+
+// default options
+Carousel.defaults = {
+  animateClass: 'animate',
+  activeClass: 'active',
+  slideWrap: 'ul',
+  slides: 'li',           // the slides
+  infinite: true,         // set to true to be able to navigate from last to first slide, and vice versa
+  display: 1,             // the minimum # of slides to display at a time. If you want to have slides
+                          // "hanging" off outside the currently viewable ones, they'd be included here
+  // disableDragging: false, // set to true if you'd like to disable touch events, temporarily or otherwise
+  //  use: .disable(bool) {}
+  initialIndex: 0         // slide index where the carousel should start
 };
 
 module.exports = Carousel;
