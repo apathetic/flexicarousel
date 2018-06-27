@@ -1,5 +1,5 @@
 /* -------------------------------------
-	SAMPLE CAROUSEL STYLES
+  SAMPLE CAROUSEL STYLES
 ------------------------------------- */
 
 /*
@@ -9,76 +9,76 @@
 
 .carousel nav .next.disabled,
 .carousel nav .prev.disabled {
-	opacity: 0.2;
+  opacity: 0.2;
 }
 
 .carousel img {
-	pointer-events: none;
-	width: 100%;
-	height: auto;
-	border: 2px solid #fff;
-	display: block;
+  pointer-events: none;
+  width: 100%;
+  height: auto;
+  border: 2px solid #fff;
+  display: block;
 }
 
 .carousel h3 {
-	position: absolute;
-	z-index: 10;
-	color: #fff;
-	padding: 1em;
+  position: absolute;
+  z-index: 10;
+  color: #fff;
+  padding: 1em;
 }
 
 
 /* TEN */
-#ten .wrap {
-	width: calc(100% + 20px);
+#ten .carousel__wrap {
+  width: calc(100% + 20px);
   margin: -10px;
 }
-#ten .wrap li {
-	padding: 10px;
+#ten .carousel__wrap li {
+  padding: 10px;
 }
 
 @media(min-width:480px) {
-	#ten .wrap > li {
-		-webkit-flex-basis: 100%;
-		   -moz-flex-basis: 100%;
-				  -ms-flex: 1 0 100%;
-				flex-basis: 100%;
-	}
+  #ten .carousel__wrap > li {
+    -webkit-flex-basis: 100%;
+       -moz-flex-basis: 100%;
+              -ms-flex: 1 0 100%;
+            flex-basis: 100%;
+  }
 }
 @media(min-width:800px) {
-	#ten .wrap > li {
-		flex-basis: 50%;
-	}
+  #ten .carousel__wrap > li {
+    flex-basis: 50%;
+  }
 }
 @media(min-width:1120px) {
-	#ten .wrap li {
-		flex-basis: 33.3333%;
-	}
+  #ten .carousel__wrap li {
+    flex-basis: 33.3333%;
+  }
 }
 
 /* BILLION */
 #billion {
-	max-width: 540px;
+  max-width: 540px;
   overflow: hidden;
 }
-#billion .wrap {
-	width: 66.666%;
+#billion .carousel__wrap {
+  width: 66.666%;
     margin: 0px auto;
 }
 
 /* SEVEN */
 @media screen and (min-width:480px) {
-	#seven .wrap > li {
-		flex-basis: calc(1/3 * 100%);		/* 33.3333%; */
-	}
+  #seven .carousel__wrap > li {
+    flex-basis: calc(1/3 * 100%);  /* 33.3333%; */
+  }
 }
 @media screen and (min-width:800px) {
-	#seven .wrap > li {
-		flex-basis: 25%;
-	}
+  #seven .carousel__wrap > li {
+    flex-basis: 25%;
+  }
 }
 @media screen and (min-width:1120px) {
-	#seven .wrap > li {
-		flex-basis: 20%;
-	}
+  #seven .carousel__wrap > li {
+    flex-basis: 20%;
+  }
 }

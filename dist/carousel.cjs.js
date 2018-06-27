@@ -37,6 +37,7 @@ var Carousel = function Carousel(handle, options) {
   // state vars
   this.current = 0;
   this.slides = [];
+  this.cloned = 0;
   this.isSliding = false;
   this.isActive = true;
 
@@ -46,7 +47,8 @@ var Carousel = function Carousel(handle, options) {
   this.deltaX = 0;
 
   // set up options
-  this.options = this._assign(Carousel.defaults, options);
+  // this.options = this._assign(Carousel.defaults, options);
+  this.options = Object.assign({}, Carousel.defaults, options);
 
   // engage engines
   this.init();
@@ -104,6 +106,7 @@ Carousel.prototype.init = function init () {
     
   this._getDimensions();
   this.go(this.current, false);
+
   return this;
 };
 
@@ -114,8 +117,6 @@ Carousel.prototype.init = function init () {
 Carousel.prototype.destroy = function destroy () {
     var this$1 = this;
 
-  // if (!this.isActive) { return; }
-
   for (var event in this$1._bindings) {
     this$1.handle.removeEventListener(event, this$1._bindings[event]);
   }
@@ -125,6 +126,8 @@ Carousel.prototype.destroy = function destroy () {
 
   this.options = this.slides = this.slideWrap = this.handle = null;
   this.isActive = false;
+
+  clearTimeout(this.timer);
 
   // remove classes ...
   // remove clones ...
@@ -147,11 +150,9 @@ Carousel.prototype.next = function next () {
  * @return {void}
  */
 Carousel.prototype.prev = function prev () {
-  if (this.options.infinite || this.current !== 0) {
-    this.go(this.current - 1);
-  } else {
-    this.go(0);
-  }
+  var to = (this.options.infinite || this.current !== 0) ? this.current - 1 : 0;
+
+  this.go(to);
 };
 
 /**
@@ -172,7 +173,7 @@ Carousel.prototype.go = function go (to) {
 
   to = this._loop(to);
   this._slide(-(to * this.width));
-    
+
   if (to !== this.current) { 
     opts.onSlide && opts.onSlide.call(this, to, this.current);
   }
@@ -227,11 +228,11 @@ Carousel.prototype._dragStart = function _dragStart (e) {
   var drag = this._normalizeEvent(e);
 
   this.startClientX = drag.X;
-  this.startClientY = drag.Y;
+  // this.startClientY = drag.Y;
   this.dragThresholdMet = false;
   this.isDragging = true;
   this.deltaX = 0;
-  this.deltaY = 0;
+  // this.deltaY = 0;
 
   if (e.target.tagName === 'IMG' || e.target.tagName === 'A') { e.target.draggable = false; }
 };
@@ -242,20 +243,23 @@ Carousel.prototype._dragStart = function _dragStart (e) {
  * @private
  */
 Carousel.prototype._drag = function _drag (e) {
-  if (!this.isDragging) {
-    console.warn('why would you get here?');
+  if (!this.isDragging) {                                                 // if triggered via mouseMove event
     return;
   }
-
+    
   var drag = this._normalizeEvent(e);
-
+    
   this.deltaX = drag.X - this.startClientX;
-  this.deltaY = drag.Y - this.startClientY;
-  this.offset = -(this.current * this.width - this.deltaX);                  // drag slide along with cursor
-  this.slideWrap.style.transform = 'translate3d(' + this.offset + 'px, 0, 0)'; // translateX for better text rendering...?
-  this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;        // determines if we should do slide, or cancel
+  // this.deltaY = drag.Y - this.startClientY;
+  var position = -(this.current * this.width - this.deltaX) - this.offset;// drag slide along with cursor
 
-  // this.drags.push(this.deltaX).shift(); // keep track of X last drag position, so that we may determine velocity. this.drags is an array of 4(?) items...?
+  this.slideWrap.style.transform = 'translate3d(' + position + 'px, 0, 0)'; // translateX for better text rendering...?
+  this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;     // determines if we should do slide, or cancel
+
+  // this.drags is array of (4?)   new Array(4)
+  // this.drags.push(this.deltaX) // keep track of 4(?) last drag positions,
+  // this.drags.shift();          // so that we may determine velocity
+    
 };
 
 /**
@@ -264,7 +268,7 @@ Carousel.prototype._drag = function _drag (e) {
  * @private
  */
 Carousel.prototype._dragEnd = function _dragEnd (e) {
-  if (!this.isDragging) {
+  if (!this.isDragging) {                                                 // if triggered via mouseLeave event
     return;
   }
 
@@ -281,6 +285,7 @@ Carousel.prototype._dragEnd = function _dragEnd (e) {
   }
   else if (this.deltaX > 0) {
     // var jump = Math.round(this.deltaX / this.width);// distance-based check to swipe multiple slides
+    // this.drags[3] - this.drags[0] > some thresh...?
     // this.go(this.current - jump);
     this.prev();
   }
@@ -288,7 +293,7 @@ Carousel.prototype._dragEnd = function _dragEnd (e) {
     this.next();
   }
 
-  this.deltaX = 0;
+  // this.deltaX = 0;
 };
 
 
@@ -336,26 +341,23 @@ Carousel.prototype.___slide = function ___slide (end) {
 };
 
 /**
- * Applies the slide translation in browser
- * @param{number} offset Where to translate the slide to. 
+ * Applies the slide translation in browser.
+ * @param{number} offset The offset, in pixels, to shift the slide wrapper.
  * @private
  */
 Carousel.prototype._slide = function _slide (offset) {
     var this$1 = this;
 
-  var delay = 400;
-
   offset -= this.offset;
 
   this.isSliding = true;
   this.slideWrap.classList.add(this.options.animateClass);
-
+  this.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)';
   this.timer = setTimeout(function () {
     this$1.isSliding = false;
-    /* this.isActive && */ this$1.slideWrap.classList.remove(this$1.options.animateClass);
-  }, delay);
+    this$1.slideWrap.classList.remove(this$1.options.animateClass);
+  }, this.speed);
 
-  this.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)';
 };
 
 
@@ -419,7 +421,8 @@ Carousel.prototype._cloneSlides = function _cloneSlides () {
     duplicate = this$1.slides[i-1].cloneNode(true);                     // cloneNode --> true is deep cloning
     duplicate.removeAttribute('id');
     duplicate.setAttribute('aria-hidden', 'true');
-    this$1._addClass(duplicate, 'clone');
+    // this._addClass(duplicate, 'clone');
+    duplicate.classList.add('clone');
     this$1.slideWrap.insertBefore(duplicate, this$1.slideWrap.firstChild);// "prependChild"
     this$1.cloned++;
   }
@@ -429,7 +432,8 @@ Carousel.prototype._cloneSlides = function _cloneSlides () {
     duplicate = this$1.slides[i$1].cloneNode(true);
     duplicate.removeAttribute('id');
     duplicate.setAttribute('aria-hidden', 'true');
-    this$1._addClass(duplicate, 'clone');
+    // this._addClass(duplicate, 'clone');
+    duplicate.classList.add('clone');
     this$1.slideWrap.appendChild(duplicate);
   }
 };
@@ -458,11 +462,12 @@ Carousel.defaults = {
   activeClass: 'active',
   slideWrap: 'ul',
   slides: 'li',           // the slides
-  infinite: true,         // set to true to be able to navigate from last to first slide, and vice versa
+  infinite: false,        // set to true to be able to navigate from last to first slide, and vice versa
   display: 1,             // the minimum # of slides to display at a time. If you want to have slides
                           // "hanging" off outside the currently viewable ones, they'd be included here
   // disableDragging: false, // set to true if you'd like to disable touch events, temporarily or otherwise
   //  use: .disable(bool) {}
+  speed: 400,             // transition speed of Carousel, in ms
   initialIndex: 0         // slide index where the carousel should start
 };
 

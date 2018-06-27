@@ -94,8 +94,8 @@ A server will spin up at ```http://localhost:8080```, where you may play with th
 
 ### 0.7
 * dropping support for IE8
-  - need classList
-  - need transform (dropping vendor prefix support)
+  - using classList
+  - using transform (dropping vendor prefix support)
   - object.assign...?
 * replacing CSS tranistions w/ requestAnimationFrame
 * kinetic scrolling
