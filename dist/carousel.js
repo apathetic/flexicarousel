@@ -222,8 +222,9 @@ Carousel.prototype._normalizeEvent = function _normalizeEvent (e) {
 Carousel.prototype._dragStart = function _dragStart (e) {
   if (this.isSliding) {
     // return false;
-    clearTimeout(this.timer);
     this.isSliding = false;
+    this.slideWrap.classList.remove(this.options.animateClass);
+    clearTimeout(this.timer);
   }
 
   var drag = this._normalizeEvent(e);
@@ -247,9 +248,9 @@ Carousel.prototype._drag = function _drag (e) {
   if (!this.isDragging) {                                                 // if triggered via mouseMove event
     return;
   }
-    
+
   var drag = this._normalizeEvent(e);
-    
+
   this.deltaX = drag.X - this.startClientX;
   // this.deltaY = drag.Y - this.startClientY;
   var position = -(this.current * this.width - this.deltaX) - this.offset;// drag slide along with cursor
@@ -260,7 +261,6 @@ Carousel.prototype._drag = function _drag (e) {
   // this.drags is array of (4?)   new Array(4)
   // this.drags.push(this.deltaX) // keep track of 4(?) last drag positions,
   // this.drags.shift();          // so that we may determine velocity
-    
 };
 
 /**
@@ -357,7 +357,7 @@ Carousel.prototype._slide = function _slide (offset) {
   this.timer = setTimeout(function () {
     this$1.isSliding = false;
     this$1.slideWrap.classList.remove(this$1.options.animateClass);
-  }, this.speed);
+  }, this.options.speed);
 
 };
 

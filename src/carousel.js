@@ -195,8 +195,9 @@ export default class Carousel {
   _dragStart(e) {
     if (this.isSliding) {
       // return false;
-      clearTimeout(this.timer);
       this.isSliding = false;
+      this.slideWrap.classList.remove(this.options.animateClass);
+      clearTimeout(this.timer);
     }
 
     const drag = this._normalizeEvent(e);
@@ -325,7 +326,7 @@ export default class Carousel {
     this.timer = setTimeout(() => {
       this.isSliding = false;
       this.slideWrap.classList.remove(this.options.animateClass);
-    }, this.speed);
+    }, this.options.speed);
 
   }
 
