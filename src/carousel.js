@@ -1,5 +1,5 @@
 // import { isTouch, transform } from './features';
-import { easeInCubic } from './easings';
+// import { easeInCubic } from './easings';
 
 export default class Carousel {
 
@@ -27,6 +27,7 @@ export default class Carousel {
     // set up options
     // this.options = this._assign(Carousel.defaults, options);
     this.options = Object.assign({}, Carousel.defaults, options);
+    // this.options = { Carousel.defaults, ...options };
 
     // engage engines
     this.init();
@@ -41,13 +42,14 @@ export default class Carousel {
     this.slideWrap = this.handle.querySelector(this.options.slideWrap);
     this.slides = this.slideWrap.querySelectorAll(this.options.slides);
     this.numSlides = this.slides.length;
-    this.current = this.options.initialIndex;
+    // this.current = this.options.initialIndex;
 
     if (!this.slideWrap || !this.slides || this.numSlides < this.options.display) { 
       console.warn('Carousel: insufficient # slides');
       return this.isActive = false;
     }
-    // if (this.options.infinite) { this._cloneSlides(); }
+
+    if (this.options.infinite) { this._cloneSlides(); }
       // if (!this.options.disableDragging) {
 
     this._bindings = {
@@ -81,7 +83,7 @@ export default class Carousel {
     window.addEventListener('orientationchange', this._bindings['orientationchange']);
     
     this._getDimensions();
-    this.go(this.current, false);
+    this.go(this.options.initialIndex);
 
     return this;
   }
@@ -107,11 +109,20 @@ export default class Carousel {
     // remove clones ...
   }
 
+  // disable() {
+  //   this.isActive = false;
+  // }
+
   /**
    * Go to the next slide.
    * @return {void}
    */
   next() {
+    // const to = (this.options.infinite || this.current !== this.numSlides - 1)
+    //     ? this.current + 1
+    //     : this.numSlides - 1;
+
+    // this.go(to);
     if (this.options.infinite || this.current !== this.numSlides-1) {
       this.go(this.current + 1);
     } else {
@@ -124,7 +135,9 @@ export default class Carousel {
    * @return {void}
    */
   prev() {
-    const to = (this.options.infinite || this.current !== 0) ? this.current - 1 : 0;
+    const to = (this.options.infinite || this.current !== 0)
+        ? this.current - 1
+        : 0;
 
     this.go(to);
   }
@@ -138,19 +151,20 @@ export default class Carousel {
 
     if (this.isSliding || !this.isActive) { return; }
 
-    // if (to < 0 || to >= this.numSlides) {                             // position the carousel if infinite and at end of bounds
-    //   let temp = (to < 0) ? this.current + this.numSlides : this.current - this.numSlides;
-    //   let offset = -(temp * this.width - this.deltaX);
-    //   this.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)'; // translateX for better text rendering...?
-    //   this.slideWrap.offsetHeight;                                    // force a repaint to actually position "to" slide. *Important*
-    // }
+    // position the carousel if infinite and at end of bounds
+    if (to < 0 || to >= this.numSlides) {
+      let temp = (to < 0) ? this.current + this.numSlides : this.current - this.numSlides;
+
+      this._setPosition(temp);
+      this.slideWrap.offsetHeight; // force a repaint to actually position slides
+    }
 
     to = this._loop(to);
     this._slide(-(to * this.width));
 
-    if (to !== this.current) { 
+    // if (to !== this.current) {
       opts.onSlide && opts.onSlide.call(this, to, this.current);
-    }
+    // }
 
     this.slides[this.current].classList.remove(opts.activeClass);
     this.slides[to].classList.add(opts.activeClass);
@@ -194,42 +208,44 @@ export default class Carousel {
    */
   _dragStart(e) {
     if (this.isSliding) {
-      // return false;
-      this.isSliding = false;
-      this.slideWrap.classList.remove(this.options.animateClass);
-      clearTimeout(this.timer);
+      return false;
+      // this.isSliding = false;
+      // this.slideWrap.classList.remove(this.options.animateClass);
+      // clearTimeout(this.timer);
     }
 
     const drag = this._normalizeEvent(e);
 
     this.startClientX = drag.X;
-    // this.startClientY = drag.Y;
     this.dragThresholdMet = false;
     this.isDragging = true;
     this.deltaX = 0;
-    // this.deltaY = 0;
 
     if (e.target.tagName === 'IMG' || e.target.tagName === 'A') { e.target.draggable = false; }
   }
 
   /**
-   * Update slides positions according to user's touch
+   * Update slide's position according to user's touch.
    * @param {Event} e The touch event.
    * @private
    */
   _drag(e) {
-    if (!this.isDragging) {                                                   // if triggered via mouseMove event
+    if (!this.isDragging) {                                              // if triggered via mouseMove event
       return;
     }
 
     const drag = this._normalizeEvent(e);
 
     this.deltaX = drag.X - this.startClientX;
-    // this.deltaY = drag.Y - this.startClientY;
-    let position = -(this.current * this.width - this.deltaX) - this.offset;  // drag slide along with cursor
+    this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;  // determines if we should slide, or cancel
 
-    this.slideWrap.style.transform = 'translate3d(' + position + 'px, 0, 0)'; // translateX for better text rendering...?
-    this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;       // determines if we should do slide, or cancel
+    if ((this.current == 0 && this.deltaX > 0) ||                        // apply friction
+        (this.current == this.numSlides - 1 && this.deltaX < 0)
+    ) {
+      this.deltaX *= 0.3;
+    }
+
+    this._setPosition();
 
     // this.drags is array of (4?)     new Array(4)
     // this.drags.push(this.deltaX)   // keep track of 4(?) last drag positions,
@@ -266,8 +282,6 @@ export default class Carousel {
     else if (this.deltaX < 0) {
       this.next();
     }
-
-    // this.deltaX = 0;
   }
 
 
@@ -278,7 +292,7 @@ export default class Carousel {
    * Animates the translation of the slide wrapper.
    * @param  {number} end Where to translate the slide to. 
    * @private
-   */
+   * /
   ___slide(end) {
     const duration = 400;
     const start = this.offset;
@@ -327,7 +341,16 @@ export default class Carousel {
       this.isSliding = false;
       this.slideWrap.classList.remove(this.options.animateClass);
     }, this.options.speed);
+  }
 
+  /**
+   * Sets the offset position, in pixels, of the slide wrapper.
+   * @param {number} i The slide index.
+   */
+  _setPosition(i=this.current) {
+    let position = this.deltaX - (i * this.width) - this.offset;
+
+    this.slideWrap.style.transform = 'translate3d(' + position + 'px, 0, 0)'; // translateX for better text rendering...?
   }
 
 
@@ -370,7 +393,6 @@ export default class Carousel {
     }
   }
 
-
   /**
    * Duplicate the first and last N slides so that infinite scrolling can work.
    * Depends on how many slides are visible at a time, and any outlying slides as well
@@ -403,8 +425,6 @@ export default class Carousel {
       this.slideWrap.appendChild(duplicate);
     }
   }
-
-
 
   /**
    * Shallow Object.assign polyfill

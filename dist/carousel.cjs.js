@@ -23,11 +23,9 @@ SOFTWARE.
 */
 'use strict';
 
-function easeInCubic(t, b, c, d) {
-  return c * (t /= d) * t * t + b;
-}
-
 // import { isTouch, transform } from './features';
+// import { easeInCubic } from './easings';
+
 var Carousel = function Carousel(handle, options) {
   if ( options === void 0 ) options={};
 
@@ -49,6 +47,7 @@ var Carousel = function Carousel(handle, options) {
   // set up options
   // this.options = this._assign(Carousel.defaults, options);
   this.options = Object.assign({}, Carousel.defaults, options);
+  // this.options = { Carousel.defaults, ...options };
 
   // engage engines
   this.init();
@@ -65,13 +64,14 @@ Carousel.prototype.init = function init () {
   this.slideWrap = this.handle.querySelector(this.options.slideWrap);
   this.slides = this.slideWrap.querySelectorAll(this.options.slides);
   this.numSlides = this.slides.length;
-  this.current = this.options.initialIndex;
+  // this.current = this.options.initialIndex;
 
   if (!this.slideWrap || !this.slides || this.numSlides < this.options.display) { 
     console.warn('Carousel: insufficient # slides');
     return this.isActive = false;
   }
-  // if (this.options.infinite) { this._cloneSlides(); }
+
+  if (this.options.infinite) { this._cloneSlides(); }
     // if (!this.options.disableDragging) {
 
   this._bindings = {
@@ -105,7 +105,7 @@ Carousel.prototype.init = function init () {
   window.addEventListener('orientationchange', this._bindings['orientationchange']);
     
   this._getDimensions();
-  this.go(this.current, false);
+  this.go(this.options.initialIndex);
 
   return this;
 };
@@ -133,11 +133,20 @@ Carousel.prototype.destroy = function destroy () {
   // remove clones ...
 };
 
+// disable() {
+// this.isActive = false;
+// }
+
 /**
  * Go to the next slide.
  * @return {void}
  */
 Carousel.prototype.next = function next () {
+  // const to = (this.options.infinite || this.current !== this.numSlides - 1)
+  //   ? this.current + 1
+  //   : this.numSlides - 1;
+
+  // this.go(to);
   if (this.options.infinite || this.current !== this.numSlides-1) {
     this.go(this.current + 1);
   } else {
@@ -150,7 +159,9 @@ Carousel.prototype.next = function next () {
  * @return {void}
  */
 Carousel.prototype.prev = function prev () {
-  var to = (this.options.infinite || this.current !== 0) ? this.current - 1 : 0;
+  var to = (this.options.infinite || this.current !== 0)
+      ? this.current - 1
+      : 0;
 
   this.go(to);
 };
@@ -164,19 +175,20 @@ Carousel.prototype.go = function go (to) {
 
   if (this.isSliding || !this.isActive) { return; }
 
-  // if (to < 0 || to >= this.numSlides) {                           // position the carousel if infinite and at end of bounds
-  // let temp = (to < 0) ? this.current + this.numSlides : this.current - this.numSlides;
-  // let offset = -(temp * this.width - this.deltaX);
-  // this.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)'; // translateX for better text rendering...?
-  // this.slideWrap.offsetHeight;                                  // force a repaint to actually position "to" slide. *Important*
-  // }
+  // position the carousel if infinite and at end of bounds
+  if (to < 0 || to >= this.numSlides) {                             
+    var temp = (to < 0) ? this.current + this.numSlides : this.current - this.numSlides;
+
+    this._setPosition(temp);
+    this.slideWrap.offsetHeight; // force a repaint to actually position slides
+  }
 
   to = this._loop(to);
   this._slide(-(to * this.width));
 
-  if (to !== this.current) { 
+  // if (to !== this.current) { 
     opts.onSlide && opts.onSlide.call(this, to, this.current);
-  }
+  // }
 
   this.slides[this.current].classList.remove(opts.activeClass);
   this.slides[to].classList.add(opts.activeClass);
@@ -220,42 +232,44 @@ Carousel.prototype._normalizeEvent = function _normalizeEvent (e) {
  */
 Carousel.prototype._dragStart = function _dragStart (e) {
   if (this.isSliding) {
-    // return false;
-    this.isSliding = false;
-    this.slideWrap.classList.remove(this.options.animateClass);
-    clearTimeout(this.timer);
+    return false;
+    // this.isSliding = false;
+    // this.slideWrap.classList.remove(this.options.animateClass);
+    // clearTimeout(this.timer);
   }
 
   var drag = this._normalizeEvent(e);
 
   this.startClientX = drag.X;
-  // this.startClientY = drag.Y;
   this.dragThresholdMet = false;
   this.isDragging = true;
   this.deltaX = 0;
-  // this.deltaY = 0;
 
   if (e.target.tagName === 'IMG' || e.target.tagName === 'A') { e.target.draggable = false; }
 };
 
 /**
- * Update slides positions according to user's touch
+ * Update slide's position according to user's touch.
  * @param {Event} e The touch event.
  * @private
  */
 Carousel.prototype._drag = function _drag (e) {
-  if (!this.isDragging) {                                                 // if triggered via mouseMove event
+  if (!this.isDragging) {                                            // if triggered via mouseMove event
     return;
   }
 
   var drag = this._normalizeEvent(e);
 
   this.deltaX = drag.X - this.startClientX;
-  // this.deltaY = drag.Y - this.startClientY;
-  var position = -(this.current * this.width - this.deltaX) - this.offset;// drag slide along with cursor
+  this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;// determines if we should slide, or cancel
 
-  this.slideWrap.style.transform = 'translate3d(' + position + 'px, 0, 0)'; // translateX for better text rendering...?
-  this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;     // determines if we should do slide, or cancel
+  if ((this.current == 0 && this.deltaX > 0) ||                      // apply friction
+      (this.current == this.numSlides - 1 && this.deltaX < 0)
+  ) {
+    this.deltaX *= 0.3;
+  }
+
+  this._setPosition();
 
   // this.drags is array of (4?)   new Array(4)
   // this.drags.push(this.deltaX) // keep track of 4(?) last drag positions,
@@ -292,8 +306,6 @@ Carousel.prototype._dragEnd = function _dragEnd (e) {
   else if (this.deltaX < 0) {
     this.next();
   }
-
-  // this.deltaX = 0;
 };
 
 
@@ -304,25 +316,23 @@ Carousel.prototype._dragEnd = function _dragEnd (e) {
  * Animates the translation of the slide wrapper.
  * @param{number} end Where to translate the slide to. 
  * @private
- */
-Carousel.prototype.___slide = function ___slide (end) {
-    var this$1 = this;
-
-  var duration = 400;
-  var start = this.offset;
-  var startTime;
+ * /
+___slide(end) {
+  const duration = 400;
+  const start = this.offset;
+  let startTime;
 
   this.slideWrap.classList.add(this.options.animateClass);
 
   // if (this.isSliding) {
 
-    var scroll = function (timestamp) {
+    const scroll = (timestamp) => {
       startTime = startTime || timestamp;
-      var elapsed = timestamp - startTime;
-      var offset = easeInCubic(elapsed, start, end, duration);
+      const elapsed = timestamp - startTime;
+      const offset = easeInCubic(elapsed, start, end, duration);
 
       console.log(offset);
-      this$1.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)';
+      this.slideWrap.style.transform = 'translate3d(' + offset + 'px, 0, 0)';
       // // use 3D tranforms for hardware acceleration on iOS
       // // but use 2D when settled, for better font-rendering
       // this.slider.style.transform = this.isAnimating ?
@@ -331,14 +341,14 @@ Carousel.prototype.___slide = function ___slide (end) {
       if (elapsed < duration) {
         window.requestAnimationFrame(scroll);
       } else {
-        this$1.slideWrap.classList.remove(this$1.options.animateClass);
-        this$1.isSliding = false;
+        this.slideWrap.classList.remove(this.options.animateClass);
+        this.isSliding = false;
       }
     };
   
     window.requestAnimationFrame(scroll);
   // }
-};
+}
 
 /**
  * Applies the slide translation in browser.
@@ -357,7 +367,18 @@ Carousel.prototype._slide = function _slide (offset) {
     this$1.isSliding = false;
     this$1.slideWrap.classList.remove(this$1.options.animateClass);
   }, this.options.speed);
+};
 
+/**
+ * Sets the offset position, in pixels, of the slide wrapper.
+ * @param {number} i The slide index.
+ */
+Carousel.prototype._setPosition = function _setPosition (i) {
+    if ( i === void 0 ) i=this.current;
+
+  var position = this.deltaX - (i * this.width) - this.offset;
+
+  this.slideWrap.style.transform = 'translate3d(' + position + 'px, 0, 0)'; // translateX for better text rendering...?
 };
 
 
@@ -402,7 +423,6 @@ Carousel.prototype._updateView = function _updateView () {
   }
 };
 
-
 /**
  * Duplicate the first and last N slides so that infinite scrolling can work.
  * Depends on how many slides are visible at a time, and any outlying slides as well
@@ -437,8 +457,6 @@ Carousel.prototype._cloneSlides = function _cloneSlides () {
     this$1.slideWrap.appendChild(duplicate);
   }
 };
-
-
 
 /**
  * Shallow Object.assign polyfill

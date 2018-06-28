@@ -220,7 +220,7 @@
 			<div class="container">
 				<h2>Compatibility</h2>
 				<ul class="bullets">
-					<li>IE8+</li>
+					<li><s>IE8+</s> IE11+</li>
 					<li>Firefox, Chrome, Opera</li>
 					<li>iOS, Android</li>
 				</ul>
@@ -346,23 +346,6 @@ container.querySelector('.next').addEventListener('click', carousel.next);
 
 	<script>
 
-		/**
-		 * Removes whitespace nodes. Useful to normalize inline-block layouts (<= IE9)
-		 * @param  {DOMElement} handle the element to remove whitespace nodes from
-		 * @return {void}
-		 */
-		function removeEmptyNodes(handle) {
-			var spaces = _.filter(handle.childNodes,
-				function(el) {
-					return (el.nodeType === 3 && !/\S/.test(el.nodeValue));
-				});
-
-			_.each(spaces, function(space) {
-				handle.removeChild(space);
-			});
-		}
-
-
 		function updateNav(i) {
 
 			var bullets = this.handle.querySelectorAll('.carousel__nav li');
@@ -396,7 +379,7 @@ container.querySelector('.next').addEventListener('click', carousel.next);
 		var bullets = fah.querySelectorAll('.carousel__nav li');
 		var carousel = new Carousel(fah, {
 			'onSlide': updateNav,
-      'initialIndex': 1
+			'initialIndex': 1
 		});
 
 		fah.querySelector('.prev').addEventListener('click', function(e){
@@ -494,11 +477,6 @@ container.querySelector('.next').addEventListener('click', carousel.next);
 			e.preventDefault();
 			carousel3.go(carousel3.current + skip);
 		});
-
-
-
-
-
 
 	</script>
 
