@@ -1,5 +1,3 @@
-// import { isTouch, transform } from './features';
-// import { easeInCubic } from './easings';
 
 export default class Carousel {
 
@@ -25,9 +23,7 @@ export default class Carousel {
     this.deltaX = 0;
 
     // set up options
-    // this.options = this._assign(Carousel.defaults, options);
-    this.options = Object.assign({}, Carousel.defaults, options);
-    // this.options = { Carousel.defaults, ...options };
+    this.options = this._assign(Carousel.defaults, options);
 
     // engage engines
     this.init();
@@ -42,7 +38,6 @@ export default class Carousel {
     this.slideWrap = this.handle.querySelector(this.options.slideWrap);
     this.slides = this.slideWrap.querySelectorAll(this.options.slides);
     this.numSlides = this.slides.length;
-    // this.current = this.options.initialIndex;
 
     if (!this.slideWrap || !this.slides || this.numSlides < this.options.display) { 
       console.warn('Carousel: insufficient # slides');
@@ -50,7 +45,6 @@ export default class Carousel {
     }
 
     if (this.options.infinite) { this._cloneSlides(); }
-      // if (!this.options.disableDragging) {
 
     this._bindings = {
       // handle
@@ -109,9 +103,13 @@ export default class Carousel {
     // remove clones ...
   }
 
-  // disable() {
-  //   this.isActive = false;
-  // }
+  /**
+   * Toggle the carousel's active state.
+   * @param {boolean} option
+   */
+  disable(option) {
+    this.isActive = !option;
+  }
 
   /**
    * Go to the next slide.
@@ -172,7 +170,7 @@ export default class Carousel {
   }
 
 
-  // ------------------------------------- Drag Events ------------------------------------- //
+  // ------------------------------------- drag events ------------------------------------- //
 
 
   /**
@@ -354,7 +352,7 @@ export default class Carousel {
   }
 
 
-  // ------------------------------------- "helper" functions ------------------------------------- //
+  // ------------------------------------- helper functions ------------------------------------- //
 
 
   /**
@@ -427,17 +425,15 @@ export default class Carousel {
   }
 
   /**
-   * Shallow Object.assign polyfill
-   * @param {Object} dest The object to copy into
-   * @param {Object} src  The object to copy from
+   * Shallow Object.assign polyfill (IE11+)
+   * @param {Object} objs Any number of objects to merge together into a new, empty Object
    * @return {Object} The Object with merged properties
    */
-  _assign(dest, src) {
-    Object.keys(src).forEach((key) => {
-      dest[key] = src[key];
-    });
-
-    return dest;
+  _assign(...objs) {
+    return objs.reduce((acc, obj) => {
+      Object.keys(obj).forEach((key) => acc[key] = obj[key]);
+      return acc;
+    }, {});
   }
 };
 
