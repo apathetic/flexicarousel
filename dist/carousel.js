@@ -24,9 +24,6 @@ SOFTWARE.
 var Carousel = (function () {
 'use strict';
 
-// import { isTouch, transform } from './features';
-// import { easeInCubic } from './easings';
-
 var Carousel = function Carousel(handle, options) {
   if ( options === void 0 ) options={};
 
@@ -42,13 +39,11 @@ var Carousel = function Carousel(handle, options) {
 
   // touch vars
   this.isDragging = false;
-  this.dragThreshold = 50;
+  this.dragThreshold = 25;
   this.deltaX = 0;
 
   // set up options
-  // this.options = this._assign(Carousel.defaults, options);
-  this.options = Object.assign({}, Carousel.defaults, options);
-  // this.options = { Carousel.defaults, ...options };
+  this.options = this._assign(Carousel.defaults, options);
 
   // engage engines
   this.init();
@@ -65,7 +60,6 @@ Carousel.prototype.init = function init () {
   this.slideWrap = this.handle.querySelector(this.options.slideWrap);
   this.slides = this.slideWrap.querySelectorAll(this.options.slides);
   this.numSlides = this.slides.length;
-  // this.current = this.options.initialIndex;
 
   if (!this.slideWrap || !this.slides || this.numSlides < this.options.display) { 
     console.warn('Carousel: insufficient # slides');
@@ -73,7 +67,6 @@ Carousel.prototype.init = function init () {
   }
 
   if (this.options.infinite) { this._cloneSlides(); }
-    // if (!this.options.disableDragging) {
 
   this._bindings = {
     // handle
@@ -134,9 +127,13 @@ Carousel.prototype.destroy = function destroy () {
   // remove clones ...
 };
 
-// disable() {
-// this.isActive = false;
-// }
+/**
+ * Toggle the carousel's active state.
+ * @param {boolean} option
+ */
+Carousel.prototype.disable = function disable (option) {
+  this.isActive = !option;
+};
 
 /**
  * Go to the next slide.
@@ -177,7 +174,7 @@ Carousel.prototype.go = function go (to) {
   if (this.isSliding || !this.isActive) { return; }
 
   // position the carousel if infinite and at end of bounds
-  if (to < 0 || to >= this.numSlides) {                             
+  if (to < 0 || to >= this.numSlides) {
     var temp = (to < 0) ? this.current + this.numSlides : this.current - this.numSlides;
 
     this._setPosition(temp);
@@ -187,7 +184,7 @@ Carousel.prototype.go = function go (to) {
   to = this._loop(to);
   this._slide(-(to * this.width));
 
-  // if (to !== this.current) { 
+  // if (to !== this.current) {
     opts.onSlide && opts.onSlide.call(this, to, this.current);
   // }
 
@@ -197,7 +194,7 @@ Carousel.prototype.go = function go (to) {
 };
 
 
-// ------------------------------------- Drag Events ------------------------------------- //
+// ------------------------------------- drag events ------------------------------------- //
 
 
 /**
@@ -264,10 +261,12 @@ Carousel.prototype._drag = function _drag (e) {
   this.deltaX = drag.X - this.startClientX;
   this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;// determines if we should slide, or cancel
 
-  if ((this.current == 0 && this.deltaX > 0) ||                      // apply friction
-      (this.current == this.numSlides - 1 && this.deltaX < 0)
-  ) {
-    this.deltaX *= 0.3;
+  if (!this.options.infinite) {
+    if ((this.current == 0 && this.deltaX > 0) ||                    // apply friction
+        (this.current == this.numSlides - 1 && this.deltaX < 0)
+    ) {
+      this.deltaX *= 0.3;
+    }
   }
 
   this._setPosition();
@@ -295,16 +294,18 @@ Carousel.prototype._dragEnd = function _dragEnd (e) {
 
   this.isDragging = false;
 
+  // const jump = Math.round(this.deltaX / this.width);// distance-based check to swipe multiple slides
+  // this.drags[3] - this.drags[0] > some thresh...?// velocity-based check
+
   if (this.deltaX !== 0 && Math.abs(this.deltaX) < this.dragThreshold) {
     this.go(this.current);
   }
   else if (this.deltaX > 0) {
-    // var jump = Math.round(this.deltaX / this.width);// distance-based check to swipe multiple slides
-    // this.drags[3] - this.drags[0] > some thresh...?
     // this.go(this.current - jump);
     this.prev();
   }
   else if (this.deltaX < 0) {
+    // this.go(this.current - jump);
     this.next();
   }
 };
@@ -383,7 +384,7 @@ Carousel.prototype._setPosition = function _setPosition (i) {
 };
 
 
-// ------------------------------------- "helper" functions ------------------------------------- //
+// ------------------------------------- helper functions ------------------------------------- //
 
 
 /**
@@ -460,17 +461,18 @@ Carousel.prototype._cloneSlides = function _cloneSlides () {
 };
 
 /**
- * Shallow Object.assign polyfill
- * @param {Object} dest The object to copy into
- * @param {Object} srcThe object to copy from
+ * Shallow Object.assign polyfill (IE11+)
+ * @param {Object} objs Any number of objects to merge together into a new, empty Object
  * @return {Object} The Object with merged properties
  */
-Carousel.prototype._assign = function _assign (dest, src) {
-  Object.keys(src).forEach(function (key) {
-    dest[key] = src[key];
-  });
+Carousel.prototype._assign = function _assign () {
+    var objs = [], len = arguments.length;
+    while ( len-- ) objs[ len ] = arguments[ len ];
 
-  return dest;
+  return objs.reduce(function (acc, obj) {
+    Object.keys(obj).forEach(function (key) { return acc[key] = obj[key]; });
+    return acc;
+  }, {});
 };
 
 

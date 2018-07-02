@@ -19,7 +19,7 @@ export default class Carousel {
 
     // touch vars
     this.isDragging = false;
-    this.dragThreshold = 50;
+    this.dragThreshold = 25;
     this.deltaX = 0;
 
     // set up options
@@ -237,10 +237,12 @@ export default class Carousel {
     this.deltaX = drag.X - this.startClientX;
     this.dragThresholdMet = Math.abs(this.deltaX) > this.dragThreshold;  // determines if we should slide, or cancel
 
-    if ((this.current == 0 && this.deltaX > 0) ||                        // apply friction
-        (this.current == this.numSlides - 1 && this.deltaX < 0)
-    ) {
-      this.deltaX *= 0.3;
+    if (!this.options.infinite) {
+      if ((this.current == 0 && this.deltaX > 0) ||                      // apply friction
+          (this.current == this.numSlides - 1 && this.deltaX < 0)
+      ) {
+        this.deltaX *= 0.3;
+      }
     }
 
     this._setPosition();
@@ -268,16 +270,18 @@ export default class Carousel {
 
     this.isDragging = false;
 
+    // const jump = Math.round(this.deltaX / this.width);  // distance-based check to swipe multiple slides
+    // this.drags[3] - this.drags[0] > some thresh...?  // velocity-based check
+
     if (this.deltaX !== 0 && Math.abs(this.deltaX) < this.dragThreshold) {
       this.go(this.current);
     }
     else if (this.deltaX > 0) {
-      // var jump = Math.round(this.deltaX / this.width);  // distance-based check to swipe multiple slides
-      // this.drags[3] - this.drags[0] > some thresh...?
       // this.go(this.current - jump);
       this.prev();
     }
     else if (this.deltaX < 0) {
+      // this.go(this.current - jump);
       this.next();
     }
   }
